@@ -7,7 +7,7 @@ license-file = "LICENSE.md"
 
 [dependencies]
 anyhow = "1.0.104"
-bevy = { version = "0.19.1", features = ["dynamic_linking"] }
+bevy = { version = "0.20", features = ["bevy_feathers", "bluenoise_texture", "dynamic_linking", "exr", "free_camera", "jpeg", "webp"] }
 serde = { version = "1.0.229", features = ["derive"] }
 tokio = { version = "1.53.2", features = ["full"] }
 tracing = "0.1.44"
