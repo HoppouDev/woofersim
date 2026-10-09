@@ -14,3 +14,4 @@
 *.jpeg filter=lfs diff=lfs merge=lfs -text
 *.webp filter=lfs diff=lfs merge=lfs -text
 *.avif filter=lfs diff=lfs merge=lfs -text
+*.usdc filter=fls diff=lfs merge=lfs -text
