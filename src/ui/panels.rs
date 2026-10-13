@@ -94,9 +94,6 @@ pub fn post_process_panel() -> impl Scene {
     }
 }
 
-// Media player panel (seek, pause, play, stop etc.)
-fn media_player_panel() -> impl Scene {}
-
 fn panel(left: Val, right: Val) -> impl Scene {
     bsn! {
         Node {
