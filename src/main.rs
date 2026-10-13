@@ -1,7 +1,6 @@
 mod anti_aliasing;
 mod environment;
 mod lighting;
-mod morph_tangents;
 mod raytracing;
 mod shape_key;
 mod ui;
@@ -14,12 +13,11 @@ use bevy::pbr::DefaultOpaqueRendererMethod;
 use bevy::prelude::*;
 use bevy::render::view::Tonemapping;
 use bevy::world_serialization::WorldAssetRoot;
-use bevy_framepace::{FramepacePlugin, FramepaceSettings, Limiter};
+use bevy_framepace::{FramepaceSettings, Limiter};
 use tracing::level_filters::LevelFilter;
 
 use environment::{EnvironmentCamera, EnvironmentPlugin};
 use lighting::LightingPlugin;
-use morph_tangents::MorphTangentsPlugin;
 use raytracing::RaytracingPlugin;
 use shape_key::SineShapeKeyPlugin;
 use ui::ControlPanelPlugin;
@@ -40,8 +38,8 @@ async fn main() -> anyhow::Result<()> {
         .insert_resource(GlobalAmbientLight::NONE)
         .add_plugins(FreeCameraPlugin)
         .add_plugins(EnvironmentPlugin {
-            path: "art_studio_2k.exr",
-            face_size: 512,
+            path: "citrus_orchard_road_puresky_4k.exr",
+            face_size: 1024,
         })
         .add_plugins(SineShapeKeyPlugin {
             name: "Position",
@@ -53,8 +51,8 @@ async fn main() -> anyhow::Result<()> {
         .add_plugins(AntiAliasingPlugin)
         .add_plugins(ControlPanelPlugin)
         .add_plugins(bevy_framepace::FramepacePlugin)
-        .add_systems(Startup, setup)
         .add_systems(Startup, setup_fps_limit)
+        .add_systems(Startup, setup)
         .run();
 
     Ok(())
@@ -69,8 +67,6 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         Camera3d::default(),
         Hdr,
         Tonemapping::AgX,
-        // Deferred rendering, which SSR needs, does not support MSAA.
-        Msaa::Off,
         Transform::from_xyz(0.0, 1.0, 1.5).looking_at(Vec3::ZERO, Vec3::Y),
         FreeCamera {
             walk_speed: 1.0,

@@ -4,6 +4,7 @@
 use bevy::light::Skybox;
 use bevy::pbr::{ScreenSpaceAmbientOcclusion, ScreenSpaceReflections};
 use bevy::post_process::bloom::Bloom;
+use bevy::post_process::motion_blur::MotionBlur;
 use bevy::prelude::*;
 
 use crate::environment::DEFAULT_BRIGHTNESS;
@@ -125,6 +126,11 @@ fn apply_lighting_settings(
         } else {
             camera.remove::<Bloom>();
         }
+
+        camera.insert(MotionBlur {
+            shutter_angle: 0.5,
+            samples: 6,
+        });
     }
 
     for mut light in &mut key_lights {
