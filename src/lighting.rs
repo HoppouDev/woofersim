@@ -12,7 +12,8 @@ pub struct LightingPlugin;
 
 impl Plugin for LightingPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(LightingSettings::default())
+        // Keeps settings loaded from disk, otherwise inserts the defaults.
+        app.init_resource::<LightingSettings>()
             .add_systems(Startup, spawn_key_light)
             .add_systems(
                 Update,
@@ -61,6 +62,27 @@ impl Default for LightingSettings {
             key_illuminance: 5_000.0,
             raytracing: false,
         }
+    }
+}
+
+/// Valid ranges of the lighting settings, shared by the sliders and the
+/// check of settings loaded from disk.
+pub mod limits {
+    use std::ops::RangeInclusive;
+
+    pub const HDRI_INTENSITY: RangeInclusive<f32> = 0.0..=5000.0;
+    pub const KEY_ILLUMINANCE: RangeInclusive<f32> = 0.0..=50000.0;
+    pub const BLOOM_INTENSITY: RangeInclusive<f32> = 0.0..=1.0;
+    pub const SSAO_RADIUS: RangeInclusive<f32> = 0.01..=1.0;
+    pub const SSAO_THICKNESS: RangeInclusive<f32> = 0.01..=0.5;
+}
+
+/// Clamps `value` to `range`, or returns `default` when it is not finite.
+pub fn clamp_or_default(value: f32, range: std::ops::RangeInclusive<f32>, default: f32) -> f32 {
+    if value.is_finite() {
+        value.clamp(*range.start(), *range.end())
+    } else {
+        default
     }
 }
 

@@ -7,10 +7,18 @@ license-file = "LICENSE.md"
 
 [dependencies]
 anyhow = "1.0.104"
-bevy = { version = "0.20", features = ["bevy_feathers", "bevy_solari", "bluenoise_texture", "dynamic_linking", "exr", "free_camera", "jpeg", "webp"] }
-bevy_framepace = { git = "https://github.com/HoppouDev/bevy_framepace.git" }
+bevy = { version = "0.20.0", features = ["bevy_solari", "bluenoise_texture", "dynamic_linking", "exr", "free_camera", "jpeg", "webp"] }
+bevy_egui = "0.43.1"
+catppuccin = "2.8.0"
+dirs = "7.0.0"
+fft-convolver = "0.4.0"
+num-complex = "0.4.6"
+pipewire = { version = "0.10.1", features = ["v0_3_49"] }
+realfft = "3.5.0"
+rtrb = "0.4.0"
 serde = { version = "1.0.229", features = ["derive"] }
 tokio = { version = "1.53.2", features = ["full"] }
+toml = "1.1.8"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 
@@ -33,19 +41,10 @@ opt-level = 3
 
 # Enable more optimization in the release profile at the cost of compile time.
 [profile.release]
-# Do a second optimization pass over the entire program, including dependencies.
-# Slows compile times, marginal improvements.
 lto = "thin"
-# Compile the entire crate as one unit.
-# Slows compile times, marginal improvements.
 codegen-units = 1
 
-# Optimize for size in the wasm-release profile to reduce load times and bandwidth usage on web.
 [profile.wasm-release]
-# Default to release profile values.
 inherits = "release"
-# Optimize with size in mind (also try "z", sometimes it is better).
-# Slightly slows compile times, great improvements to file size and runtime performance.
 opt-level = "s"
-# Strip all debugging information from the binary to slightly reduce file size.
 strip = "debuginfo"

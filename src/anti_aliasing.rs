@@ -11,7 +11,8 @@ pub struct AntiAliasingPlugin;
 
 impl Plugin for AntiAliasingPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(AntiAliasing::Taa).add_systems(
+        // Keeps the setting loaded from disk, otherwise inserts the default.
+        app.init_resource::<AntiAliasing>().add_systems(
             Update,
             apply_anti_aliasing.run_if(resource_changed::<AntiAliasing>),
         );
@@ -19,7 +20,10 @@ impl Plugin for AntiAliasingPlugin {
 }
 
 /// Anti-aliasing method for the 3D camera.
-#[derive(Resource, Clone, Copy, PartialEq, Eq, Default, Debug)]
+#[derive(
+    Resource, Clone, Copy, PartialEq, Eq, Default, Debug, serde::Serialize, serde::Deserialize,
+)]
+#[serde(rename_all = "lowercase")]
 pub enum AntiAliasing {
     Off,
     /// Also smooths the noise of SSR and SSAO.

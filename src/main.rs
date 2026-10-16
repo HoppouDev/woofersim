@@ -1,11 +1,14 @@
 mod anti_aliasing;
+mod audio;
 mod environment;
 mod lighting;
+mod persistence;
 mod raytracing;
 mod shape_key;
 mod ui;
 
 use anti_aliasing::AntiAliasingPlugin;
+use audio::WooferAudioPlugin;
 use bevy::camera::Hdr;
 use bevy::camera_controller::free_camera::{FreeCamera, FreeCameraPlugin};
 use bevy::core_pipeline::prepass::{DeferredPrepass, DepthPrepass};
@@ -14,13 +17,13 @@ use bevy::pbr::DefaultOpaqueRendererMethod;
 use bevy::prelude::*;
 use bevy::render::view::Tonemapping;
 use bevy::world_serialization::WorldAssetRoot;
-use bevy_framepace::{FramepaceSettings, Limiter};
 use tracing::level_filters::LevelFilter;
 
 use environment::{EnvironmentCamera, EnvironmentPlugin};
 use lighting::LightingPlugin;
+use persistence::PersistencePlugin;
 use raytracing::RaytracingPlugin;
-use shape_key::SineShapeKeyPlugin;
+use shape_key::ShapeKeyPlugin;
 use ui::ControlPanelPlugin;
 
 #[tokio::main]
@@ -42,25 +45,19 @@ async fn main() -> anyhow::Result<()> {
             path: "citrus_orchard_road_puresky_4k.exr",
             face_size: 1024,
         })
-        .add_plugins(SineShapeKeyPlugin {
-            name: "Position",
-            frequency: 1.0,
-        })
+        .add_plugins(ShapeKeyPlugin { name: "Position" })
+        // Loads the saved settings, so it goes before the plugins using them.
+        .add_plugins(PersistencePlugin)
+        .add_plugins(WooferAudioPlugin)
         // .add_plugins(MorphTangentsPlugin)
         .add_plugins(LightingPlugin)
         .add_plugins(RaytracingPlugin)
         .add_plugins(AntiAliasingPlugin)
         .add_plugins(ControlPanelPlugin)
-        .add_plugins(bevy_framepace::FramepacePlugin)
-        .add_systems(Startup, setup_fps_limit)
         .add_systems(Startup, setup)
         .run();
 
     Ok(())
-}
-
-fn setup_fps_limit(mut settings: ResMut<FramepaceSettings>) {
-    settings.limiter = Limiter::from_framerate(30.0);
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
