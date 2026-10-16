@@ -2,8 +2,8 @@
 //!
 //! While enabled, the camera gets [`SolariLighting`] and every standard
 //! material mesh gets a [`RaytracingMesh3d`]. Both are removed again when it is
-//! disabled, so the acceleration structures are not rebuilt every frame for
-//! nothing.
+//! disabled, or while the scene is not rendered, so the acceleration
+//! structures are not rebuilt every frame for nothing.
 //!
 //! Screen space reflections and ambient occlusion are suspended meanwhile,
 //! since Solari already traces both.
@@ -40,7 +40,7 @@ fn apply_camera(
 ) {
     for (camera, has_solari) in &cameras {
         let mut camera = commands.entity(camera);
-        match (settings.raytracing, has_solari) {
+        match (settings.solari_active(), has_solari) {
             (true, false) => {
                 camera.insert((
                     SolariLighting {
@@ -85,7 +85,7 @@ fn add_raytracing_meshes(
     candidates: Query<(Entity, &Mesh3d), NotYetRaytraced>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    if !settings.raytracing {
+    if !settings.solari_active() {
         return;
     }
     for (entity, Mesh3d(handle)) in &candidates {
@@ -116,7 +116,7 @@ fn remove_raytracing_meshes(
     settings: Res<LightingSettings>,
     raytraced: Query<Entity, With<RaytracingMesh3d>>,
 ) {
-    if settings.raytracing {
+    if settings.solari_active() {
         return;
     }
     for entity in &raytraced {

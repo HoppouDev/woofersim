@@ -69,6 +69,15 @@ impl Default for LightingSettings {
     }
 }
 
+impl LightingSettings {
+    /// Whether Solari should run. Its scene systems keep building the
+    /// acceleration structures even for an inactive camera, so they are
+    /// suspended along with scene rendering.
+    pub fn solari_active(&self) -> bool {
+        self.raytracing && self.render_scene
+    }
+}
+
 /// Valid ranges of the lighting settings, shared by the sliders and the
 /// check of settings loaded from disk.
 pub mod limits {
