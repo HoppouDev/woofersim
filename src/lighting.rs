@@ -41,6 +41,9 @@ pub struct LightingSettings {
     pub key_illuminance: f32,
     /// Raytraced lighting with Solari, see [`crate::raytracing`].
     pub raytracing: bool,
+    /// Whether the scene camera renders at all. Off leaves the GPU to the
+    /// panels while the simulation keeps running.
+    pub render_scene: bool,
 }
 
 impl Default for LightingSettings {
@@ -61,6 +64,7 @@ impl Default for LightingSettings {
             key_light: false,
             key_illuminance: 5_000.0,
             raytracing: false,
+            render_scene: true,
         }
     }
 }
@@ -120,10 +124,13 @@ fn spawn_key_light(mut commands: Commands) {
 fn apply_lighting_settings(
     mut commands: Commands,
     settings: Res<LightingSettings>,
-    cameras: Query<Entity, With<Camera3d>>,
+    mut cameras: Query<(Entity, &mut Camera), With<Camera3d>>,
     mut key_lights: Query<&mut DirectionalLight, With<KeyLight>>,
 ) {
-    for camera in &cameras {
+    for (camera, mut camera_settings) in &mut cameras {
+        // An inactive camera skips its whole render graph, prepasses and
+        // post processing included.
+        camera_settings.is_active = settings.render_scene;
         let mut camera = commands.entity(camera);
         // Solari traces reflections and occlusion itself. SSR would paint
         // environment map reflections over its output and wash it out.

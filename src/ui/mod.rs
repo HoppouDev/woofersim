@@ -101,6 +101,7 @@ fn draw_ui(
             .max_rect(ctx.viewport_rect()),
     );
     panels::woofer_panel(&mut root, &mut woofer);
+    let render_scene = lighting.render_scene;
     panels::graphics_panel(&mut root, lighting, anti_aliasing);
     // Added after the side panels, so it only spans the space between them.
     egui::Panel::bottom("response")
@@ -111,7 +112,7 @@ fn draw_ui(
             response_graph::show(ui, &mut graph, &woofer);
         });
     egui::CentralPanel::no_frame().show(&mut root, |ui| {
-        scene_view::show(ui, &mut scene);
+        scene_view::show(ui, &mut scene, render_scene);
     });
     Ok(())
 }

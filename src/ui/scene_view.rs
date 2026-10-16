@@ -14,6 +14,8 @@ use bevy::window::{CursorGrabMode, CursorOptions};
 use bevy_egui::egui::{self, Ui, load::SizedTexture};
 use bevy_egui::{EguiTextureHandle, EguiUserTextures};
 
+use super::theme::palette;
+
 #[derive(Resource)]
 pub struct SceneView {
     image: Handle<Image>,
@@ -109,8 +111,9 @@ pub fn resize(
 }
 
 /// Fills the remaining space of `ui` with the scene and records the size the
-/// image needs to match it in physical pixels.
-pub fn show(ui: &mut Ui, view: &mut SceneView) {
+/// image needs to match it in physical pixels. With `render` off the camera
+/// is inactive and the image would hold a stale frame, so a note stands in.
+pub fn show(ui: &mut Ui, view: &mut SceneView, render: bool) {
     let size = ui.available_size();
     let scale = ui.ctx().pixels_per_point();
     view.wanted = Extent3d {
@@ -118,6 +121,21 @@ pub fn show(ui: &mut Ui, view: &mut SceneView) {
         height: ((size.y * scale).round() as u32).max(MIN_SIZE),
         depth_or_array_layers: 1,
     };
+    if !render {
+        view.camera_input = false;
+        let p = palette();
+        let (rect, _) = ui.allocate_exact_size(size, egui::Sense::hover());
+        // Crust, one shade darker than the panels around it.
+        ui.painter().rect_filled(rect, 0.0, p.crust);
+        ui.painter().text(
+            rect.center(),
+            egui::Align2::CENTER_CENTER,
+            "Scene rendering is off",
+            egui::TextStyle::Body.resolve(ui.style()),
+            p.overlay1,
+        );
+        return;
+    }
     let response = ui.image(SizedTexture::new(view.texture, size));
     view.camera_input = response.contains_pointer() && !ui.ctx().egui_wants_keyboard_input();
 }

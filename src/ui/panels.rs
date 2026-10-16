@@ -178,6 +178,14 @@ pub fn graphics_panel(
     let (mut lighting_changed, mut aa_changed) = (false, false);
 
     side_panel(root, egui::Panel::right("graphics"), "Graphics", |ui| {
+        section(ui, "Scene", |ui| {
+            lighting_changed |= toggle_row(
+                ui,
+                "Render scene",
+                &mut l.render_scene,
+                defaults.render_scene,
+            );
+        });
         section(ui, "Lighting", |ui| {
             lighting_changed |=
                 toggle_row(ui, "Raytracing", &mut l.raytracing, defaults.raytracing);

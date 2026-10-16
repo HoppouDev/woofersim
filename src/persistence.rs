@@ -77,6 +77,7 @@ struct FileVersion {
 #[derive(Serialize, Deserialize)]
 #[serde(default)]
 struct GraphicsSettings {
+    render_scene: bool,
     raytracing: bool,
     hdri_intensity: f32,
     key_light: bool,
@@ -111,6 +112,7 @@ impl GraphicsSettings {
         use ScreenSpaceAmbientOcclusionQualityLevel as Level;
         let ssao = &lighting.ssao_settings;
         Self {
+            render_scene: lighting.render_scene,
             raytracing: lighting.raytracing,
             hdri_intensity: lighting.hdri_intensity,
             key_light: lighting.key_light,
@@ -142,6 +144,7 @@ impl GraphicsSettings {
         };
         let defaults = LightingSettings::default();
         let lighting = LightingSettings {
+            render_scene: self.render_scene,
             raytracing: self.raytracing,
             hdri_intensity: clamp_or_default(
                 self.hdri_intensity,
