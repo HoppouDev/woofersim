@@ -8,6 +8,7 @@ mod ui;
 use anti_aliasing::AntiAliasingPlugin;
 use bevy::camera::Hdr;
 use bevy::camera_controller::free_camera::{FreeCamera, FreeCameraPlugin};
+use bevy::core_pipeline::prepass::{DeferredPrepass, DepthPrepass};
 use bevy::log::LogPlugin;
 use bevy::pbr::DefaultOpaqueRendererMethod;
 use bevy::prelude::*;
@@ -65,6 +66,11 @@ fn setup_fps_limit(mut settings: ResMut<FramepaceSettings>) {
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         Camera3d::default(),
+        // Opaque materials are deferred, so they are only drawn by a camera
+        // with these prepasses. SSR requires them too, but they must not
+        // depend on SSR being on at startup.
+        DepthPrepass,
+        DeferredPrepass,
         Hdr,
         Tonemapping::AgX,
         Transform::from_xyz(0.0, 1.0, 1.5).looking_at(Vec3::ZERO, Vec3::Y),
