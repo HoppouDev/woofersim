@@ -13,6 +13,7 @@ mod widgets;
 
 use bevy::camera::visibility::RenderLayers;
 use bevy::camera_controller::free_camera::run_freecamera_controller;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy_egui::egui::{self, Frame, LayerId, Margin, UiBuilder};
 use bevy_egui::{
@@ -21,7 +22,7 @@ use bevy_egui::{
 };
 
 use crate::anti_aliasing::AntiAliasing;
-use crate::audio::WooferSettings;
+use crate::audio::{AudioDevices, AvailableDevices, WooferSettings};
 use crate::lighting::LightingSettings;
 use scene_view::SceneView;
 
@@ -83,9 +84,17 @@ fn style_new_context(mut contexts: Query<&mut EguiContext, Added<EguiContext>>) 
 /// Height of the graph panel below the scene, including its margins.
 const GRAPH_HEIGHT: f32 = 220.0;
 
+/// The audio device choice and what it can choose from.
+#[derive(SystemParam)]
+struct DeviceChoice<'w> {
+    devices: ResMut<'w, AudioDevices>,
+    available: Option<Res<'w, AvailableDevices>>,
+}
+
 fn draw_ui(
     mut contexts: EguiContexts,
     mut woofer: ResMut<WooferSettings>,
+    mut device_choice: DeviceChoice,
     lighting: ResMut<LightingSettings>,
     anti_aliasing: ResMut<AntiAliasing>,
     mut scene: ResMut<SceneView>,
@@ -100,7 +109,12 @@ fn draw_ui(
             .layer_id(LayerId::background())
             .max_rect(ctx.viewport_rect()),
     );
-    panels::woofer_panel(&mut root, &mut woofer);
+    panels::woofer_panel(
+        &mut root,
+        &mut woofer,
+        &mut device_choice.devices,
+        device_choice.available.as_deref(),
+    );
     let render_scene = lighting.render_scene;
     panels::graphics_panel(&mut root, lighting, anti_aliasing);
     // Added after the side panels, so it only spans the space between them.

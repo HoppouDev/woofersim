@@ -1,11 +1,17 @@
-//! Exposes WooferSim as a PipeWire audio sink and moves the cone with
-//! whatever is played into it.
+//! Feeds the audio other apps play through the woofer simulation and moves
+//! the cone with the result. On Linux WooferSim is a PipeWire sink apps play
+//! into. On Windows it captures the system audio or a chosen capture device
+//! through WASAPI.
 
 mod driver;
 mod dsp;
+mod engine;
 mod fir;
 mod history;
-mod sink;
+#[cfg(target_os = "linux")]
+mod pipewire_sink;
+#[cfg(windows)]
+mod wasapi_capture;
 
 use std::f32::consts::TAU;
 use std::sync::Arc;
@@ -18,7 +24,10 @@ use crate::shape_key::ShapeKey;
 pub use dsp::CrossoverMode;
 use dsp::{WooferModel, WooferParams};
 use history::ExcursionHistory;
-use sink::Sink;
+#[cfg(target_os = "linux")]
+use pipewire_sink::Sink;
+#[cfg(windows)]
+use wasapi_capture::Sink;
 
 /// Sample rate the frequency response is evaluated at. The audio thread runs
 /// at 44.1 or 48 kHz, which makes no visible difference in the bass range.
@@ -30,20 +39,68 @@ impl Plugin for WooferAudioPlugin {
     fn build(&self, app: &mut App) {
         // Settings loaded from disk are already there, otherwise the defaults.
         let settings = *app.world_mut().get_resource_or_init::<WooferSettings>();
+        let devices = app
+            .world_mut()
+            .get_resource_or_init::<AudioDevices>()
+            .clone();
         let shared = Arc::new(Shared::new(settings));
-        let sink = Sink::spawn(shared.clone(), settings.audio_output)
-            .inspect_err(|error| {
-                error!("PipeWire sink unavailable, the cone stays at rest: {error:#}")
-            })
-            .ok();
+        let sink = spawn_sink(&shared, settings.audio_output, &devices);
 
-        app.insert_resource(AudioLink { shared, sink })
-            .add_systems(PreUpdate, drive_cone)
-            .add_systems(
-                Update,
+        #[cfg(windows)]
+        app.insert_resource(
+            wasapi_capture::list_devices()
+                .inspect_err(|error| error!("Could not list the audio devices: {error:#}"))
+                .unwrap_or_default(),
+        );
+        app.insert_resource(AudioLink {
+            shared,
+            sink,
+            devices,
+        })
+        .add_systems(PreUpdate, drive_cone)
+        .add_systems(
+            Update,
+            (
                 send_settings.run_if(resource_changed::<WooferSettings>),
-            );
+                switch_devices.run_if(resource_changed::<AudioDevices>),
+            ),
+        );
     }
+}
+
+fn spawn_sink(shared: &Arc<Shared>, output: bool, devices: &AudioDevices) -> Option<Sink> {
+    Sink::spawn(shared.clone(), output, devices)
+        .inspect_err(|error| error!("Audio unavailable, the cone stays at rest: {error:#}"))
+        .ok()
+}
+
+/// Which audio devices to use, by name, saved to the settings file. Only
+/// Windows offers a choice, on Linux apps pick the WooferSim sink themselves.
+#[derive(Resource, Clone, PartialEq, Default, serde::Serialize, serde::Deserialize)]
+#[serde(default)]
+pub struct AudioDevices {
+    /// Capture device to take the audio from. `None` captures everything
+    /// other apps play.
+    pub input: Option<String>,
+    /// Device the output plays on. `None` follows the system default.
+    pub output: Option<String>,
+}
+
+impl AudioDevices {
+    /// Whether the output can only carry the simulated bass. Capturing the
+    /// system audio on Windows leaves the original playing on the speakers,
+    /// treble included.
+    pub fn output_is_bass_only(&self) -> bool {
+        cfg!(windows) && self.input.is_none()
+    }
+}
+
+/// Names of the devices [`AudioDevices`] can choose from, listed at startup.
+/// Only present where there is a choice.
+#[derive(Resource, Default)]
+pub struct AvailableDevices {
+    pub inputs: Vec<String>,
+    pub outputs: Vec<String>,
 }
 
 /// Filter, enclosure, gain and output settings, editable at runtime and
@@ -365,6 +422,23 @@ struct AudioLink {
     shared: Arc<Shared>,
     /// Kept so the sink lives as long as the app, and to switch the output.
     sink: Option<Sink>,
+    /// The devices `sink` was started with.
+    devices: AudioDevices,
+}
+
+/// Restarts the audio backend on the newly chosen devices.
+fn switch_devices(
+    devices: Res<AudioDevices>,
+    settings: Res<WooferSettings>,
+    mut link: ResMut<AudioLink>,
+) {
+    if link.devices == *devices {
+        return;
+    }
+    link.devices = devices.clone();
+    // The old backend has to let go of its devices first.
+    link.sink = None;
+    link.sink = spawn_sink(&link.shared, settings.audio_output, &devices);
 }
 
 fn send_settings(

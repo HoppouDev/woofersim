@@ -9,17 +9,27 @@ use bevy_egui::egui::{self, Frame, Margin, RichText, ScrollArea, Ui};
 
 use super::widgets::{choice_row, dropdown_row, section, slider_row, toggle_row};
 use crate::anti_aliasing::AntiAliasing;
-use crate::audio::{CrossoverMode, WooferSettings, limits as woofer_limits};
+use crate::audio::{
+    AudioDevices, AvailableDevices, CrossoverMode, WooferSettings, limits as woofer_limits,
+};
 use crate::lighting::{LightingSettings, limits as lighting_limits};
 
 /// Outer width of each panel, including its margins.
 const PANEL_WIDTH: f32 = 320.0;
 
-/// Woofer simulation and audio output, on the left.
-pub fn woofer_panel(root: &mut Ui, woofer: &mut ResMut<WooferSettings>) {
+/// Woofer simulation and audio output, on the left. The device choice only
+/// shows where `available` lists devices to choose from.
+pub fn woofer_panel(
+    root: &mut Ui,
+    woofer: &mut ResMut<WooferSettings>,
+    devices: &mut ResMut<AudioDevices>,
+    available: Option<&AvailableDevices>,
+) {
     let defaults = WooferSettings::default();
     let w = woofer.bypass_change_detection();
-    let mut changed = false;
+    let d = devices.bypass_change_detection();
+    let bass_only = d.output_is_bass_only();
+    let (mut changed, mut devices_changed) = (false, false);
 
     side_panel(root, egui::Panel::left("woofer"), "Woofer", |ui| {
         section(ui, "Crossover", |ui| {
@@ -135,28 +145,47 @@ pub fn woofer_panel(root: &mut Ui, woofer: &mut ResMut<WooferSettings>) {
                 1,
                 defaults.bass_mix_db,
             );
-            changed |= slider_row(
-                ui,
-                "Output treble mix (dB)",
-                &mut w.treble_mix_db,
-                woofer_limits::GAIN_DB,
-                0.5,
-                1,
-                defaults.treble_mix_db,
-            );
+            ui.add_enabled_ui(!bass_only, |ui| {
+                changed |= slider_row(
+                    ui,
+                    "Output treble mix (dB)",
+                    &mut w.treble_mix_db,
+                    woofer_limits::GAIN_DB,
+                    0.5,
+                    1,
+                    defaults.treble_mix_db,
+                );
+            });
         });
         section(ui, "Speaker output", |ui| {
+            if let Some(available) = available {
+                devices_changed |=
+                    device_row(ui, "Input", &mut d.input, &available.inputs, "System audio");
+                devices_changed |= device_row(
+                    ui,
+                    "Output",
+                    &mut d.output,
+                    &available.outputs,
+                    "Default device",
+                );
+            }
             changed |= toggle_row(
                 ui,
                 "Play through speakers",
                 &mut w.audio_output,
                 defaults.audio_output,
             );
-            changed |= toggle_row(
-                ui,
-                "Include treble",
-                &mut w.treble_output,
-                defaults.treble_output,
+            ui.add_enabled_ui(!bass_only, |ui| {
+                changed |= toggle_row(
+                    ui,
+                    "Include treble",
+                    &mut w.treble_output,
+                    defaults.treble_output,
+                );
+            })
+            .response
+            .on_disabled_hover_text(
+                "The system audio already reaches the speakers, so only the bass is added",
             );
         });
     });
@@ -164,6 +193,41 @@ pub fn woofer_panel(root: &mut Ui, woofer: &mut ResMut<WooferSettings>) {
     if changed {
         woofer.set_changed();
     }
+    if devices_changed {
+        devices.set_changed();
+    }
+}
+
+/// A dropdown choosing a device by name, `None` standing for `default_label`.
+/// A saved device that is not connected stays listed, so it is not lost.
+fn device_row(
+    ui: &mut Ui,
+    label: &str,
+    value: &mut Option<String>,
+    names: &[String],
+    default_label: &str,
+) -> bool {
+    let missing = value
+        .as_deref()
+        .filter(|name| !names.iter().any(|n| n == name));
+    let options: Vec<(usize, &str)> = std::iter::once(default_label)
+        .chain(names.iter().map(String::as_str))
+        .chain(missing)
+        .enumerate()
+        .collect();
+    let mut index = match value.as_deref() {
+        None => 0,
+        Some(name) => options[1..]
+            .iter()
+            .find(|(_, option)| *option == name)
+            .map_or(0, |&(index, _)| index),
+    };
+    if !dropdown_row(ui, label, &mut index, &options, 0) {
+        return false;
+    }
+    let chosen = (index != 0).then(|| options[index].1.to_owned());
+    *value = chosen;
+    true
 }
 
 /// Lighting, post processing and ambient occlusion, on the right.

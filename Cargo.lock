@@ -6427,6 +6427,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "wasapi"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1b5f8804a710cf7a18b07610225abb127e562f3249a1f3ed88a6f045c5444910"
+dependencies = [
+ "log",
+ "num-integer",
+ "thiserror 2.0.21",
+ "windows",
+ "windows-core",
+]
+
+[[package]]
 name = "wasi"
 version = "0.11.1+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7410,6 +7423,7 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
+ "wasapi",
 ]
 
 [[package]]

@@ -19,7 +19,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::anti_aliasing::AntiAliasing;
-use crate::audio::WooferSettings;
+use crate::audio::{AudioDevices, WooferSettings};
 use crate::lighting::{LightingSettings, clamp_or_default, limits};
 
 /// Version of the file layout. Bump it when a change needs more than new keys
@@ -38,6 +38,7 @@ impl Plugin for PersistencePlugin {
         let (store, file) = SettingsStore::open();
         let (lighting, anti_aliasing) = file.graphics.into_resources();
         app.insert_resource(file.woofer.sanitized())
+            .insert_resource(file.devices)
             .insert_resource(lighting)
             .insert_resource(anti_aliasing)
             .insert_resource(store)
@@ -53,6 +54,8 @@ struct SettingsFile {
     #[serde(default)]
     woofer: WooferSettings,
     #[serde(default)]
+    devices: AudioDevices,
+    #[serde(default)]
     graphics: GraphicsSettings,
 }
 
@@ -61,6 +64,7 @@ impl Default for SettingsFile {
         Self {
             version: SCHEMA_VERSION,
             woofer: WooferSettings::default(),
+            devices: AudioDevices::default(),
             graphics: GraphicsSettings::default(),
         }
     }
@@ -284,12 +288,14 @@ fn set_aside(path: &Path, reason: &str) -> (SettingsFile, bool) {
 fn save_changed_settings(
     mut store: ResMut<SettingsStore>,
     woofer: Res<WooferSettings>,
+    devices: Res<AudioDevices>,
     lighting: Res<LightingSettings>,
     anti_aliasing: Res<AntiAliasing>,
     mut exit: MessageReader<AppExit>,
 ) {
     let changed = |added: bool, changed: bool| changed && !added;
     if changed(woofer.is_added(), woofer.is_changed())
+        || changed(devices.is_added(), devices.is_changed())
         || changed(lighting.is_added(), lighting.is_changed())
         || changed(anti_aliasing.is_added(), anti_aliasing.is_changed())
     {
@@ -309,6 +315,7 @@ fn save_changed_settings(
     let file = SettingsFile {
         version: SCHEMA_VERSION,
         woofer: *woofer,
+        devices: devices.clone(),
         graphics: GraphicsSettings::from_resources(&lighting, *anti_aliasing),
     };
     if let Err(error) = save(path, &file) {

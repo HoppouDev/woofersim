@@ -13,7 +13,6 @@ catppuccin = "2.8.0"
 dirs = "7.0.0"
 fft-convolver = "0.4.0"
 num-complex = "0.4.6"
-pipewire = { version = "0.10.1", features = ["v0_3_49"] }
 realfft = "3.5.0"
 rtrb = "0.4.0"
 serde = { version = "1.0.229", features = ["derive"] }
@@ -30,6 +29,12 @@ linker = "rust-lld.exe"
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
 rustflags = ["-Clink-arg=-fuse-ld=wild"]
+
+[target.'cfg(target_os = "linux")'.dependencies]
+pipewire = { version = "0.10.1", features = ["v0_3_49"] }
+
+[target."cfg(windows)".dependencies]
+wasapi = "0.26.0"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
